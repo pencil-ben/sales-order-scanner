@@ -639,8 +639,9 @@
             };
             
             try {
-                const url = `${NETSUITE_CONFIG.baseUrl}?script=${NETSUITE_CONFIG.scriptId}&deploy=${NETSUITE_CONFIG.deployId}`;
-                const authHeader = generateOAuthHeader('PUT', NETSUITE_CONFIG.baseUrl);
+               const url = `http://192.168.1.142:3000/scan`;
+                // const authHeader = generateOAuthHeader('PUT', NETSUITE_CONFIG.baseUrl);
+const authHeader = ''; // Proxy handles authentication
                 
                 console.log('Sending request to:', url);
                 console.log('Request data:', scanData);
