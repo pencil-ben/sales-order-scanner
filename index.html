@@ -550,9 +550,9 @@
             populateDropdowns();
             updateConfigDisplay();
             
-            // Update button states when SO input changes
+            // Update button states when SO input changes (with longer debounce)
             document.getElementById('scanInput').addEventListener('input', function() {
-                setTimeout(checkOrderStatus, 500); // Debounce
+                setTimeout(checkOrderStatus, 2000); // Longer debounce: 2 seconds
             });
         });
 
@@ -653,9 +653,15 @@
             updateButtonStates();
         }
 
-        // Check order status when SO ID is entered
+        // Check order status when SO ID is entered (with debouncing)
+        let statusCheckTimeout;
         async function checkOrderStatus() {
             const salesOrderId = document.getElementById('scanInput').value.trim();
+            
+            // Clear existing timeout
+            if (statusCheckTimeout) {
+                clearTimeout(statusCheckTimeout);
+            }
             
             if (!salesOrderId) {
                 hideOrderStatus();
@@ -666,24 +672,47 @@
                 return;
             }
             
-            try {
-                const url = `https://192.168.1.142:3000/scan?salesOrderId=${salesOrderId}`;
-                const response = await fetch(url);
-                const result = await response.json();
-                
-                if (result.success) {
-                    currentOrderStatus = result;
-                    updateOrderStatusDisplay();
-                    updateButtonStates();
-                } else {
+            // Debounce status checks to prevent rapid requests
+            statusCheckTimeout = setTimeout(async () => {
+                try {
+                    showResult('🔍 Checking order status...', 'success');
+                    
+                    const url = `https://192.168.1.142:3000/scan?salesOrderId=${salesOrderId}`;
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        currentOrderStatus = result;
+                        updateOrderStatusDisplay();
+                        updateButtonStates();
+                        // Clear the checking message
+                        setTimeout(() => {
+                            document.getElementById('result').innerHTML = '';
+                        }, 1000);
+                    } else {
+                        hideOrderStatus();
+                        updateButtonStates();
+                        showResult('⚠️ Order not found or error checking status', 'error');
+                        setTimeout(() => {
+                            document.getElementById('result').innerHTML = '';
+                        }, 2000);
+                    }
+                } catch (error) {
+                    console.error('Status check error:', error);
                     hideOrderStatus();
                     updateButtonStates();
+                    showResult('❌ Cannot connect to server', 'error');
+                    setTimeout(() => {
+                        document.getElementById('result').innerHTML = '';
+                    }, 2000);
                 }
-            } catch (error) {
-                console.error('Status check error:', error);
-                hideOrderStatus();
-                updateButtonStates();
-            }
+            }, 1500); // Wait 1.5 seconds before checking
         }
         
         function updateOrderStatusDisplay() {
