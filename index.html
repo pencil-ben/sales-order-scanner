@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Sales Order Scanner</title>
+    <title>Production Scanner with Pause/Resume</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -19,7 +19,7 @@
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             text-align: center;
-            max-width: 600px;
+            max-width: 700px;
             width: 100%;
             position: relative;
         }
@@ -96,11 +96,6 @@
             background: #ccc;
             color: #333;
         }
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 2em;
-        }
         .current-config {
             background: #e7f3ff;
             padding: 15px;
@@ -109,9 +104,25 @@
             border-left: 4px solid #2196F3;
             text-align: left;
         }
-        .current-config h3 {
-            margin-top: 0;
-            color: #1976D2;
+        .order-status {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #17a2b8;
+            text-align: left;
+        }
+        .status-in-production {
+            border-left-color: #28a745;
+            background: #f8fff9;
+        }
+        .status-paused {
+            border-left-color: #ffc107;
+            background: #fffbf0;
+        }
+        .status-completed {
+            border-left-color: #6c757d;
+            background: #f8f9fa;
         }
         .scan-input {
             width: 100%;
@@ -128,23 +139,83 @@
             outline: none;
             box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
         }
+        .scan-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
         .scan-button {
-            width: 100%;
             padding: 15px;
-            font-size: 18px;
-            background: #4CAF50;
-            color: white;
+            font-size: 16px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
-        }
-        .scan-button:hover {
-            background: #45a049;
+            transition: all 0.3s;
         }
         .scan-button:disabled {
-            background: #ccc;
+            opacity: 0.5;
             cursor: not-allowed;
+        }
+        .btn-start {
+            background: #28a745;
+            color: white;
+        }
+        .btn-start:hover:not(:disabled) {
+            background: #218838;
+        }
+        .btn-complete {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-complete:hover:not(:disabled) {
+            background: #545b62;
+        }
+        .btn-pause {
+            background: #ffc107;
+            color: #212529;
+        }
+        .btn-pause:hover:not(:disabled) {
+            background: #e0a800;
+        }
+        .btn-resume {
+            background: #17a2b8;
+            color: white;
+        }
+        .btn-resume:hover:not(:disabled) {
+            background: #138496;
+        }
+        .pause-reasons {
+            display: none;
+            margin: 15px 0;
+            text-align: left;
+            background: #fff3cd;
+            border: 2px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .pause-reasons label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .pause-reasons select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .quick-scan {
+            background: #007bff;
+            color: white;
+            grid-column: 1 / -1;
+            margin-top: 10px;
+        }
+        .quick-scan:hover:not(:disabled) {
+            background: #0056b3;
         }
         .result {
             margin: 20px 0;
@@ -168,6 +239,20 @@
             font-size: 18px;
             margin: 20px 0;
         }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .instruction {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
         .scan-log {
             background: #f8f9fa;
             border: 2px solid #e9ecef;
@@ -178,12 +263,6 @@
             overflow-y: auto;
             text-align: left;
         }
-        .scan-log h3 {
-            margin-top: 0;
-            color: #495057;
-            border-bottom: 2px solid #dee2e6;
-            padding-bottom: 10px;
-        }
         .log-entry {
             background: white;
             border: 1px solid #dee2e6;
@@ -191,28 +270,23 @@
             padding: 12px;
             margin: 8px 0;
             font-family: monospace;
-            font-size: 14px;
+            font-size: 12px;
         }
-        .log-success {
+        .log-in, .log-resume {
             border-left: 4px solid #28a745;
             background: #f8fff9;
         }
-        .log-error {
-            border-left: 4px solid #dc3545;
-            background: #fff8f8;
+        .log-out {
+            border-left: 4px solid #6c757d;
+            background: #f8f9fa;
         }
-        .log-time {
-            font-weight: bold;
-            color: #6c757d;
+        .log-pause {
+            border-left: 4px solid #ffc107;
+            background: #fffbf0;
         }
-        .log-details {
-            margin-top: 5px;
-            color: #495057;
-        }
-        .instruction {
-            color: #666;
-            font-size: 16px;
-            margin-bottom: 20px;
+        .log-transfer {
+            border-left: 4px solid #17a2b8;
+            background: #f0fdff;
         }
     </style>
 </head>
@@ -253,13 +327,22 @@
             </div>
         </div>
         
-        <h1>📱 Sales Order Scanner</h1>
+        <h1>📱 Production Scanner</h1>
         
         <div class="current-config">
-            <h3>Current Configuration</h3>
+            <h3>Scanner Configuration</h3>
             <div><strong>Operator:</strong> <span id="currentOperator">Not configured</span> (ID: <span id="currentOperatorId">-</span>)</div>
             <div><strong>Department:</strong> <span id="currentDepartment">Not configured</span> (ID: <span id="currentDepartmentId">-</span>)</div>
             <div><strong>Machine:</strong> <span id="currentMachine">Not configured</span> (ID: <span id="currentMachineId">-</span>)</div>
+        </div>
+        
+        <div class="order-status" id="orderStatus" style="display: none;">
+            <h3>Current Order Status</h3>
+            <div><strong>Sales Order:</strong> <span id="statusOrderId">-</span></div>
+            <div><strong>Status:</strong> <span id="statusProduction">-</span></div>
+            <div><strong>Current Operator:</strong> <span id="statusOperator">-</span></div>
+            <div><strong>Last Scan:</strong> <span id="statusLastScan">-</span></div>
+            <div id="statusPauseReason" style="display: none;"><strong>Pause Reason:</strong> <span id="statusPauseText">-</span></div>
         </div>
         
         <div class="instruction">
@@ -270,13 +353,59 @@
                id="scanInput" 
                class="scan-input" 
                placeholder="106086" 
-               autofocus>
+               autofocus
+               onchange="checkOrderStatus()">
         
-        <button id="scanButton" class="scan-button" onclick="executeScan()" disabled>
-            📱 SCAN ORDER
-        </button>
+        <div class="scan-buttons">
+            <button id="startBtn" class="scan-button btn-start" onclick="executeScan('IN')" disabled>
+                ▶️ START PRODUCTION
+            </button>
+            <button id="completeBtn" class="scan-button btn-complete" onclick="executeScan('OUT')" disabled>
+                ✅ COMPLETE ORDER
+            </button>
+            <button id="pauseBtn" class="scan-button btn-pause" onclick="showPauseOptions()" disabled>
+                ⏸️ PAUSE WORK
+            </button>
+            <button id="resumeBtn" class="scan-button btn-resume" onclick="executeScan('RESUME')" disabled>
+                ▶️ RESUME WORK
+            </button>
+            <button id="quickScanBtn" class="scan-button quick-scan" onclick="executeScan('AUTO')" disabled>
+                🚀 QUICK SCAN (Auto-Detect)
+            </button>
+        </div>
         
-        <div class="loading" id="loading">⏳ Sending to NetSuite...</div>
+        <div class="pause-reasons" id="pauseReasons">
+            <label for="pauseReasonSelect">⏸️ Reason for Pause:</label>
+            <select id="pauseReasonSelect">
+                <option value="">Select reason...</option>
+                <optgroup label="🔧 Equipment Issues">
+                    <option value="Machine Down">🔧 Machine Down</option>
+                    <option value="Maintenance">🛠️ Maintenance</option>
+                    <option value="Setup/Changeover">⚙️ Setup/Changeover</option>
+                </optgroup>
+                <optgroup label="📦 Material Issues">
+                    <option value="Stock Issues">📦 Stock Issues</option>
+                    <option value="Waiting for Material">⏳ Waiting for Material</option>
+                    <option value="Quality Issue">⚠️ Quality Issue</option>
+                </optgroup>
+                <optgroup label="👥 Personnel">
+                    <option value="Break">☕ Break</option>
+                    <option value="Lunch">🍽️ Lunch</option>
+                    <option value="Meeting">👥 Meeting</option>
+                    <option value="Training">📚 Training</option>
+                </optgroup>
+                <optgroup label="⏰ Schedule">
+                    <option value="End of Day">🌅 End of Day</option>
+                    <option value="Other">❓ Other</option>
+                </optgroup>
+            </select>
+            <div style="margin-top: 15px;">
+                <button class="scan-button btn-pause" onclick="executePause()" style="margin-right: 10px;">Confirm Pause</button>
+                <button class="scan-button" onclick="hidePauseOptions()" style="background: #ccc; color: #333;">Cancel</button>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">⏳ Processing...</div>
         <div id="result"></div>
         
         <div class="scan-log">
@@ -404,7 +533,7 @@
             { id: 38, name: "98 CHILLER-TOYOTA MAT. HDLER." }
         ];
 
-        // Current configuration
+        // Current configuration and order status
         let currentConfig = {
             operatorId: null,
             departmentId: null,
@@ -413,11 +542,18 @@
             departmentName: null,
             machineName: null
         };
+        
+        let currentOrderStatus = null;
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             populateDropdowns();
             updateConfigDisplay();
+            
+            // Update button states when SO input changes
+            document.getElementById('scanInput').addEventListener('input', function() {
+                setTimeout(checkOrderStatus, 500); // Debounce
+            });
         });
 
         function populateDropdowns() {
@@ -498,7 +634,6 @@
             };
 
             updateConfigDisplay();
-            document.getElementById('scanButton').disabled = false;
             closeSettings();
             
             showResult('✅ Configuration saved! Scanner is now enabled.', 'success');
@@ -514,68 +649,231 @@
             document.getElementById('currentDepartmentId').textContent = currentConfig.departmentId || '-';
             document.getElementById('currentMachine').textContent = currentConfig.machineName || 'Not configured';
             document.getElementById('currentMachineId').textContent = currentConfig.machineId || '-';
-        }
-
-        // OAuth and scanning functions (same as working version)
-        function generateOAuthSignature(method, url, params, consumerSecret, tokenSecret) {
-            const sortedParams = Object.keys(params).sort().map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`).join('&');
-            const baseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(sortedParams)}`;
-            const signingKey = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
-            const signature = CryptoJS.HmacSHA256(baseString, signingKey).toString(CryptoJS.enc.Base64);
-            return signature;
-        }
-
-        function generateOAuthHeader(method, url, additionalParams = {}) {
-            const timestamp = Math.floor(Date.now() / 1000);
-            const nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
             
-            const oauthParams = {
-                deploy: NETSUITE_CONFIG.deployId,
-                oauth_consumer_key: NETSUITE_CONFIG.consumerKey,
-                oauth_nonce: nonce,
-                oauth_signature_method: 'HMAC-SHA256',
-                oauth_timestamp: timestamp,
-                oauth_token: NETSUITE_CONFIG.tokenId,
-                oauth_version: '1.0',
-                script: NETSUITE_CONFIG.scriptId,
-                ...additionalParams
+            updateButtonStates();
+        }
+
+        // Check order status when SO ID is entered
+        async function checkOrderStatus() {
+            const salesOrderId = document.getElementById('scanInput').value.trim();
+            
+            if (!salesOrderId) {
+                hideOrderStatus();
+                return;
+            }
+            
+            if (!isConfigured()) {
+                return;
+            }
+            
+            try {
+                const url = `https://192.168.1.142:3000/scan?salesOrderId=${salesOrderId}`;
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentOrderStatus = result;
+                    updateOrderStatusDisplay();
+                    updateButtonStates();
+                } else {
+                    hideOrderStatus();
+                    updateButtonStates();
+                }
+            } catch (error) {
+                console.error('Status check error:', error);
+                hideOrderStatus();
+                updateButtonStates();
+            }
+        }
+        
+        function updateOrderStatusDisplay() {
+            if (!currentOrderStatus) {
+                hideOrderStatus();
+                return;
+            }
+            
+            const statusDiv = document.getElementById('orderStatus');
+            statusDiv.style.display = 'block';
+            
+            // Update status styling
+            statusDiv.className = 'order-status';
+            if (currentOrderStatus.inProduction) {
+                statusDiv.classList.add('status-in-production');
+            } else if (currentOrderStatus.isPaused) {
+                statusDiv.classList.add('status-paused');
+            } else if (currentOrderStatus.productionStatus === '4') { // COMPLETED
+                statusDiv.classList.add('status-completed');
+            }
+            
+            document.getElementById('statusOrderId').textContent = currentOrderStatus.orderNumber || currentOrderStatus.salesOrderId;
+            document.getElementById('statusProduction').textContent = getStatusText(currentOrderStatus);
+            document.getElementById('statusOperator').textContent = currentOrderStatus.currentOperator || 'None';
+            document.getElementById('statusLastScan').textContent = currentOrderStatus.lastScanType || 'None';
+            
+            // Show pause reason if paused
+            const pauseReasonDiv = document.getElementById('statusPauseReason');
+            if (currentOrderStatus.isPaused && currentOrderStatus.pauseReason) {
+                pauseReasonDiv.style.display = 'block';
+                document.getElementById('statusPauseText').textContent = currentOrderStatus.pauseReason;
+            } else {
+                pauseReasonDiv.style.display = 'none';
+            }
+        }
+        
+        function getStatusText(status) {
+            if (status.isPaused) return '⏸️ PAUSED';
+            if (status.inProduction) return '▶️ IN PRODUCTION';
+            if (status.productionStatus === '4') return '✅ COMPLETED'; // COMPLETED
+            return '⏹️ NOT STARTED';
+        }
+        
+        function hideOrderStatus() {
+            document.getElementById('orderStatus').style.display = 'none';
+            currentOrderStatus = null;
+        }
+        
+        function updateButtonStates() {
+            const hasOrder = document.getElementById('scanInput').value.trim();
+            const configured = isConfigured();
+            
+            // Enable/disable buttons based on configuration and order status
+            document.getElementById('startBtn').disabled = !configured || !hasOrder || (currentOrderStatus && currentOrderStatus.inProduction);
+            document.getElementById('completeBtn').disabled = !configured || !hasOrder || !currentOrderStatus || (!currentOrderStatus.inProduction && !currentOrderStatus.isPaused);
+            document.getElementById('pauseBtn').disabled = !configured || !hasOrder || !currentOrderStatus || !currentOrderStatus.inProduction;
+            document.getElementById('resumeBtn').disabled = !configured || !hasOrder || !currentOrderStatus || !currentOrderStatus.isPaused;
+            document.getElementById('quickScanBtn').disabled = !configured || !hasOrder;
+        }
+        
+        function isConfigured() {
+            return currentConfig.operatorId && currentConfig.departmentId && currentConfig.machineId;
+        }
+        
+        function showPauseOptions() {
+            document.getElementById('pauseReasons').style.display = 'block';
+            document.getElementById('pauseReasonSelect').focus();
+        }
+        
+        function hidePauseOptions() {
+            document.getElementById('pauseReasons').style.display = 'none';
+            document.getElementById('pauseReasonSelect').value = '';
+        }
+        
+        function executePause() {
+            const reason = document.getElementById('pauseReasonSelect').value;
+            if (!reason) {
+                alert('Please select a reason for the pause.');
+                return;
+            }
+            executeScan('PAUSE', reason);
+            hidePauseOptions();
+        }
+        
+        // Enhanced scan execution with pause support
+        async function executeScan(scanType, pauseReason = '') {
+            const salesOrderId = document.getElementById('scanInput').value.trim();
+            
+            if (!salesOrderId) {
+                showResult('❌ Please enter a Sales Order ID', 'error');
+                return;
+            }
+            
+            if (!isConfigured()) {
+                showResult('❌ Please configure the scanner first (click ⚙️)', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            
+            const scanData = {
+                salesOrderId: salesOrderId,
+                employeeId: currentConfig.operatorId,
+                departmentId: currentConfig.departmentId,
+                machineId: currentConfig.machineId,
+                scanDateTime: new Date().toLocaleString("en-US", {timeZone: "America/Chicago"}),
+                scanType: scanType,
+                pauseReason: pauseReason,
+                scannerSuffix: `${currentConfig.operatorId}-${currentConfig.departmentId}-${currentConfig.machineId}`
             };
             
-            const signature = generateOAuthSignature(
-                method,
-                NETSUITE_CONFIG.baseUrl,
-                oauthParams,
-                NETSUITE_CONFIG.consumerSecret,
-                NETSUITE_CONFIG.tokenSecret
-            );
-            
-            oauthParams.oauth_signature = signature;
-            
-            const headerParams = {
-                oauth_consumer_key: oauthParams.oauth_consumer_key,
-                oauth_nonce: oauthParams.oauth_nonce,
-                oauth_signature_method: oauthParams.oauth_signature_method,
-                oauth_timestamp: oauthParams.oauth_timestamp,
-                oauth_token: oauthParams.oauth_token,
-                oauth_version: oauthParams.oauth_version,
-                oauth_signature: oauthParams.oauth_signature
-            };
-            
-            const authHeader = 'OAuth realm="' + NETSUITE_CONFIG.realm + '",' +
-                Object.keys(headerParams).map(key => `${key}="${encodeURIComponent(headerParams[key])}"`).join(',');
-            
-            return authHeader;
+            try {
+                const url = `https://192.168.1.142:3000/scan`;
+                
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(scanData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const scanTypeText = getScanTypeText(result.scanType);
+                    let successMsg = `${scanTypeText} scan completed for SO ${result.salesOrderId}`;
+                    
+                    if (result.duration) {
+                        successMsg += `<br>Duration: ${result.duration}`;
+                    }
+                    
+                    if (pauseReason) {
+                        successMsg += `<br>Reason: ${pauseReason}`;
+                    }
+                    
+                    const cstTime = new Date().toLocaleString("en-US", {
+                        timeZone: "America/Chicago",
+                        hour12: true
+                    });
+                    successMsg += `<br>Operator: ${currentConfig.operatorName}<br>Time: ${cstTime} CST`;
+                    
+                    showResult(`✅ ${successMsg}`, 'success');
+                    addToLog(result.scanType.toLowerCase(), result.message, `Duration: ${result.duration || 'N/A'}`);
+                    
+                    // Refresh order status
+                    await checkOrderStatus();
+                    
+                    // Auto-clear success message after 3 seconds
+                    setTimeout(() => {
+                        document.getElementById('result').innerHTML = '';
+                    }, 3000);
+                    
+                } else {
+                    const errorMsg = `Error: ${result.error}`;
+                    showResult(`❌ ${errorMsg}`, 'error');
+                    addToLog('error', errorMsg, `Failed to process ${scanType} scan for SO ${salesOrderId}`);
+                }
+                
+            } catch (error) {
+                console.error('Scan error:', error);
+                const errorMsg = `Network error: ${error.message}`;
+                showResult(`❌ ${errorMsg}`, 'error');
+                addToLog('error', errorMsg, `Failed to connect to NetSuite`);
+            } finally {
+                showLoading(false);
+            }
         }
-
+        
+        function getScanTypeText(scanType) {
+            const types = {
+                'IN': '▶️ START',
+                'OUT': '✅ COMPLETE',
+                'PAUSE': '⏸️ PAUSE',
+                'RESUME': '▶️ RESUME',
+                'TRANSFER': '🔄 TRANSFER'
+            };
+            return types[scanType] || scanType;
+        }
+        
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
-
+        
         function showResult(message, type = 'success') {
             const resultDiv = document.getElementById('result');
             resultDiv.innerHTML = `<div class="result ${type}">${message}</div>`;
         }
-
+        
         function addToLog(type, message, details = '') {
             const logContainer = document.getElementById('scanLog');
             const timestamp = new Date().toLocaleString("en-US", {
@@ -606,95 +904,18 @@
                 logContainer.removeChild(logContainer.lastChild);
             }
         }
-
-        function executeScan() {
-            const salesOrderId = document.getElementById('scanInput').value.trim();
-            
-            if (!salesOrderId) {
-                showResult('❌ Please enter a Sales Order ID', 'error');
-                addToLog('error', 'Empty scan attempted');
-                return;
-            }
-            
-            if (!currentConfig.operatorId || !currentConfig.departmentId || !currentConfig.machineId) {
-                showResult('❌ Please configure the scanner first (click ⚙️)', 'error');
-                addToLog('error', 'Scan attempted without configuration');
-                return;
-            }
-            
-            addToLog('success', `Processing scan: SO ${salesOrderId}`);
-            processScan(salesOrderId);
-        }
-
-        async function processScan(salesOrderId) {
-            showLoading(true);
-            
-            const scanData = {
-                salesOrderId: salesOrderId,
-                employeeId: currentConfig.operatorId,
-                departmentId: currentConfig.departmentId,
-                machineId: currentConfig.machineId,
-                scanDateTime: new Date().toLocaleString("en-US", {timeZone: "America/Chicago"}),
-                scannerSuffix: `${currentConfig.operatorId}-${currentConfig.departmentId}-${currentConfig.machineId}`
-            };
-            
-            try {
-               const url = `https://192.168.1.142:3000/scan`;
-                // const authHeader = generateOAuthHeader('PUT', NETSUITE_CONFIG.baseUrl);
-const authHeader = ''; // Proxy handles authentication
-                
-                console.log('Sending request to:', url);
-                console.log('Request data:', scanData);
-                
-                const response = await fetch(url, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': authHeader,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(scanData)
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    const successMsg = `SO ${result.salesOrderId} scanned successfully!`;
-                    const cstTime = new Date().toLocaleString("en-US", {
-                        timeZone: "America/Chicago",
-                        hour12: true
-                    });
-                    showResult(`✅ ${successMsg}<br>Operator: ${currentConfig.operatorName}<br>Time: ${cstTime} CST`, 'success');
-                    addToLog('success', successMsg, `Operator: ${currentConfig.operatorName}, Machine: ${currentConfig.machineName}`);
-                    
-                    // Clear input for next scan
-                    document.getElementById('scanInput').value = '';
-                    document.getElementById('scanInput').focus();
-                    
-                    // Auto-clear success message after 3 seconds
-                    setTimeout(() => {
-                        document.getElementById('result').innerHTML = '';
-                    }, 3000);
-                } else {
-                    const errorMsg = `Error: ${result.error}`;
-                    showResult(`❌ ${errorMsg}`, 'error');
-                    addToLog('error', errorMsg, `Failed to update SO ${salesOrderId}`);
-                }
-                
-            } catch (error) {
-                console.error('Scan error:', error);
-                const errorMsg = `Network error: ${error.message}`;
-                showResult(`❌ ${errorMsg}`, 'error');
-                addToLog('error', errorMsg, `Failed to connect to NetSuite`);
-            } finally {
-                showLoading(false);
-            }
-        }
-
+        
         // Handle Enter key on scan input
         document.getElementById('scanInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                executeScan();
+                // If paused, resume. If not started or completed, start. Otherwise quick scan.
+                if (currentOrderStatus && currentOrderStatus.isPaused) {
+                    executeScan('RESUME');
+                } else if (!currentOrderStatus || currentOrderStatus.productionStatus === '4') { // COMPLETED
+                    executeScan('IN');
+                } else {
+                    executeScan('AUTO');
+                }
             }
         });
 
