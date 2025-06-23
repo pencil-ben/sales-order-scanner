@@ -677,7 +677,7 @@
                 try {
                     showResult('🔍 Checking order status...', 'success');
                     
-                    const url = `https://192.168.1.142:3000/scan?salesOrderId=${salesOrderId}`;
+                    const url = `https://192.168.1.142:3000/status?salesOrderId=${salesOrderId}`;
                     const response = await fetch(url, {
                         method: 'GET',
                         headers: {
